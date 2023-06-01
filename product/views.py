@@ -43,6 +43,12 @@ def stable(request, rq_id, paint):
     from diffusers import StableDiffusionInstructPix2PixPipeline
     from enum import Enum
 
+    if not rq_id:
+        return "fail"
+
+    if Emoji.objects.filter(request_id=rq_id).exists():
+        return HttpResponse("exist")
+
     class Prompt(Enum):
         a = "smile"
         b = "angry"
@@ -72,7 +78,7 @@ def stable(request, rq_id, paint):
         if s.name == paint:
             t_name = s.value
 
-    for i in range(1, 4):
+    for i in range(1, 2):
         for p in Prompt:
             prompt = str(p.name) + str(t_name)
             images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
@@ -83,11 +89,12 @@ def stable(request, rq_id, paint):
             input_path = 'stable_pix2pix.png'
             output_path = 'output.png'
 
+            input = Image.open(input_path)
             output = remove(input)
             output.save(output_path)
 
             # 이미지 파일 오픈
-            wordImg = str(p.name) + ".png"
+            wordImg = str(p.value) + ".png"
             background = Image.open(wordImg)
             foreground = Image.open("output.png")
 
@@ -100,7 +107,9 @@ def stable(request, rq_id, paint):
             # 이미지 합성
             resize_back.paste(foreground, (0, 0), foreground)
 
-            img = open("output.png", "rb")
+            resize_back.save("merge.png")
+
+            img = open("merge.png", "rb")
 
             e_name = p.value
             img = base64.b64encode(img.read())
@@ -113,16 +122,22 @@ def stable(request, rq_id, paint):
 
 
 def style(request, rq_id, img_url):
+
+    if not rq_id:
+        return "fail"
+
+    if Style.objects.filter(request_id=rq_id).exists():
+        return HttpResponse("exist")
     class Painting(Enum):
-        gogh = "goth painting style"
+        gogh = "gogh painting style"
         sketch = "sketch"
         cartoon = "cartoon style"
 
     model_id = "timbrooks/instruct-pix2pix"
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
-    #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
-    url = img_url
+    url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+    #url = img_url
 
     def download_image(url):
         image = PIL.Image.open(requests.get(url, stream=True).raw)
@@ -136,7 +151,15 @@ def style(request, rq_id, img_url):
         prompt = str(p.value)
         images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
         images[0].save("paintingStyle.png")
-        img = open("paintingStyle.png", "rb")
+
+        input_path = 'paintingStyle.png'
+        output_path = 'outStyle.png'
+
+        input = Image.open(input_path)
+        output = remove(input)
+        output.save(output_path)
+
+        img = open("outStyle.png", "rb")
 
         t_name = p.value
         img = base64.b64encode(img.read())
