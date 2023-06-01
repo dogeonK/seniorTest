@@ -11,7 +11,7 @@ import requests
 import torch
 from diffusers import StableDiffusionInstructPix2PixPipeline
 from enum import Enum
-
+from rembg import remove
 def check(request):
     return HttpResponse("hihi")
 
@@ -74,11 +74,33 @@ def stable(request, rq_id, paint):
 
     for i in range(1, 4):
         for p in Prompt:
-            prompt = str(p.value) + str(t_name)
+            prompt = str(p.name) + str(t_name)
             images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
                           guidance_scale=7).images
             images[0].save("stable_pix2pix.png")
-            img = open("stable_pix2pix.png", "rb")
+
+            #remove background
+            input_path = 'stable_pix2pix.png'
+            output_path = 'output.png'
+
+            output = remove(input)
+            output.save(output_path)
+
+            # 이미지 파일 오픈
+            wordImg = str(p.name) + ".png"
+            background = Image.open(wordImg)
+            foreground = Image.open("output.png")
+
+            # 배경이 투명한 이미지 파일의 사이즈 가져오기
+            (img_h, img_w) = foreground.size
+
+            # 합성할 배경 이미지를 위의 파일 사이즈로 resize
+            resize_back = background.resize((img_h, img_w))
+
+            # 이미지 합성
+            resize_back.paste(foreground, (0, 0), foreground)
+
+            img = open("output.png", "rb")
 
             e_name = p.value
             img = base64.b64encode(img.read())
@@ -164,58 +186,3 @@ def show_emoji(request, rq_id, t_name, e_name, s_num):
         return response
     else:
         return HttpResponseNotFound("Image not found")
-
-#
-# def stylepack(request):
-#     # # 입력 이미지와 스타일 이미지 경로
-#     # content_image_path = "content.jpg"
-#     # style_image_path = "style.jpg"
-#     #
-#     # # NeuralStyle 객체 생성
-#     # neural_style = NeuralStyle()
-#     #
-#     # # 모델 파라미터 설정
-#     # neural_style.set_content_image_path(content_image_path)
-#     # neural_style.set_style_image_path(style_image_path)
-#     # neural_style.set_output_image_path("output.jpg")
-#     # neural_style.set_num_iterations(1000)
-#     #
-#     # # 스타일 전이 실행
-#     # neural_style.run()
-#     # --------------------------------------------------------------
-#     # # from neuralstyle.methods import run_style_transfer
-#     # #
-#     # # content_image_path = "face.png"
-#     # # style_image_path = "StarryNight.png"
-#     # # run_style_transfer("/StarryNight.png", "/face.png", "output/")
-#
-#     return HttpResponse("A")
-# def emojiStyle(request, rq_id):
-#     import os
-#     import PIL
-#     import requests
-#     import torch
-#     from diffusers import StableDiffusionInstructPix2PixPipeline
-#     from enum import Enum
-#
-#
-#     model_id = "timbrooks/instruct-pix2pix"
-#     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
-#
-#     image = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
-#
-#     for p in Painting:
-#         prompt = p.value
-#         images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
-#         images[0].save("paintingStyle.png")
-#         img = open("paintingStyle.png")
-#
-#         rq_id = "maro"
-#         t_name = "test_name"
-#         img = base64.b64encode(img.read())
-#         url = "localhost:8000/showImg/" + rq_id + "/" + t_name
-#
-#         test = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
-#         test.save()
-#
-#     return HttpResponse("style")
