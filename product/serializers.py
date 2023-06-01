@@ -14,16 +14,15 @@ from django.core.files import File
 
 
 class StyleSerializer(serializers.ModelSerializer):
-    img = serializers.ImageField(use_url=True)
+    #img = serializers.ImageField(use_url=True)
 
     class Meta:
         model = Style
-        fields = '__all__'
-
+        fields = ('request_id', 'tag_name', "img_url")
 
 class EmojiSerializer(serializers.ModelSerializer):
     emoji = serializers.ImageField(use_url=True)
 
     class Meta:
         model = Emoji
-        fields = '__all__'
+        fields = ('request_id', 'tag_name', "emoji_tag", "emoji_url")
