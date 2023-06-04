@@ -1,17 +1,23 @@
-from PIL import Image
-from django.http import FileResponse, HttpResponse, HttpResponseNotFound
+from PIL import Image, ImageOps
+from django.http import HttpResponse, HttpResponseNotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
 from .serializers import *
 import base64
 from io import BytesIO
-import PIL
 import requests
 import torch
 from diffusers import StableDiffusionInstructPix2PixPipeline
 from enum import Enum
 from rembg import remove
+from product.frame_interpolation.eval import interpolator, util
+import mediapy
+from PIL import Image
+from huggingface_hub import snapshot_download
+from image_tools.sizes import resize_and_crop
+from moviepy.video.io.VideoFileClip import VideoFileClip
+
 def check(request):
     return HttpResponse("hihi")
 
@@ -37,17 +43,11 @@ def test_reqeust(request):
 
 
 def stable(request, rq_id, paint):
-    import PIL
-    import requests
-    import torch
-    from diffusers import StableDiffusionInstructPix2PixPipeline
-    from enum import Enum
-
     if not rq_id:
         return "fail"
 
-    if Emoji.objects.filter(request_id=rq_id).exists():
-        return HttpResponse("exist")
+    # if Emoji.objects.filter(request_id=rq_id).exists():
+    #     return HttpResponse("exist")
 
     class Prompt(Enum):
         a = "smile"
@@ -67,12 +67,61 @@ def stable(request, rq_id, paint):
     url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
     def download_image(url):
-        image = PIL.Image.open(requests.get(url, stream=True).raw)
-        image = PIL.ImageOps.exif_transpose(image)
+        image = Image.open(requests.get(url, stream=True).raw)
+        image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         return image
-
     image = download_image(url)
+
+    #mp4 변환 메서드들
+    def load_model(model_name):
+        model = interpolator.Interpolator(snapshot_download(repo_id=model_name), None)
+
+        return model
+
+    model_name = "akhaliq/frame-interpolation-film-style"
+    models = {model_name: load_model(model_name)}
+
+    ffmpeg_path = util.get_ffmpeg_path()
+    mediapy.set_ffmpeg(ffmpeg_path)
+
+    def resize(width, img):
+        basewidth = width
+        img = Image.open(img)
+        wpercent = (basewidth / float(img.size[0]))
+        hsize = int((float(img.size[1]) * float(wpercent)))
+        img = img.resize((basewidth, hsize), Image.ANTIALIAS)
+        return img
+
+    def resize_img(img1, img2):
+        img_target_size = Image.open(img1)
+        img_to_resize = resize_and_crop(
+            img2,
+            (img_target_size.size[0], img_target_size.size[1]),
+            crop_origin="middle"
+        )
+        img_to_resize.save('resized_img2.png')
+
+    def predict(frame1, frame2, times_to_interpolate, model_name):
+        model = models[model_name]
+        frame1 = resize(256, frame1)
+        frame2 = resize(256, frame2)
+
+        frame1.save("test1.png")
+        frame2.save("test2.png")
+
+        resize_img("test1.png", "test2.png")
+        input_frames = ["test1.png", "resized_img2.png"]
+
+        frames = list(
+            util.interpolate_recursively_from_files(
+                input_frames, times_to_interpolate, model))
+
+        mediapy.write_video("out.mp4", frames, fps=30)
+
+    # img = Style.objects.filter(request_id=rq_id, tag_name=paint).values("img")
+    # base_string = img.first()['img']
+    # image = Image.open(BytesIO(base64.b64decode(base_string)))
 
     for s in Style_p:
         if s.name == paint:
@@ -109,13 +158,20 @@ def stable(request, rq_id, paint):
 
             resize_back.save("merge.png")
 
-            img = open("merge.png", "rb")
+            #img = open("merge.png", "rb")
+
+            #mp4 생성 후 -> gif 변경
+            predict("stable_pix2pix.png", "merge.png", 3, model_name)
+            VideoFileClip('out.mp4').write_gif('out.gif')
+            gif = open('out.gif', 'rb')
 
             e_name = p.value
-            img = base64.b64encode(img.read())
-            url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            #img = base64.b64encode(img.read())
+            gif = base64.b64encode(gif.read())
+            #url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
 
-            test = Emoji(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, emoji_url=url, emoji=img, set_num=i)
+            test = Emoji(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, emoji_url=url, emoji=gif, set_num=i)
             test.save()
 
     return HttpResponse("emoji")
@@ -136,12 +192,14 @@ def style(request, rq_id, img_url):
     model_id = "timbrooks/instruct-pix2pix"
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
-    url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
-    #url = img_url
+    #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+
+    imgPath = "http://springEC2IPv4:8080/imgPath"
+    url = imgPath + str(img_url)
 
     def download_image(url):
-        image = PIL.Image.open(requests.get(url, stream=True).raw)
-        image = PIL.ImageOps.exif_transpose(image)
+        image = Image.open(requests.get(url, stream=True).raw)
+        image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         return image
 
@@ -209,3 +267,15 @@ def show_emoji(request, rq_id, t_name, e_name, s_num):
         return response
     else:
         return HttpResponseNotFound("Image not found")
+
+def show_emoji_gif(request, rq_id, t_name, e_name, s_num):
+    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values("emoji")
+    if emojis.exists():
+        base_string = emojis.first()['emoji']
+
+        decoded_data = base64.b64decode(base_string)
+
+        response = HttpResponse(decoded_data, content_type='image/gif')
+        return response
+    else:
+        return HttpResponseNotFound("Emoji not found")
