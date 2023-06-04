@@ -1,5 +1,5 @@
 from PIL import Image, ImageOps
-from django.http import HttpResponse, HttpResponseNotFound, FileResponse
+from django.http import HttpResponse, HttpResponseNotFound, FileResponse, HttpResponseRedirect
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
@@ -203,8 +203,7 @@ def style(request, rq_id, img_url):
         return HttpResponse("exist")
 
     redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
-    response = redirect(redirect_url)
-    response.status_code = 200
+    response = HttpResponseRedirect(redirect_url)
     response.content = "success"
     return response
 
