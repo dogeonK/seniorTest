@@ -62,8 +62,8 @@ def stable(request, rq_id, img_url, paint):
         sketch = "sketch"
         cartoon = "cartoon style"
 
-    model_id = "timbrooks/instruct-pix2pix"
-    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+    # model_id = "timbrooks/instruct-pix2pix"
+    # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
     #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
@@ -138,10 +138,10 @@ def stable(request, rq_id, img_url, paint):
 
     for i in range(1, 2):
         for p in Prompt:
-            prompt = str(p.name) + ", " + str(t_name) + ", " + sfw_prompt
-            images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
-                          guidance_scale=7).images
-            images[0].save("stable_pix2pix.png")
+            # prompt = str(p.name) + ", " + str(t_name) + ", " + sfw_prompt
+            # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
+            #               guidance_scale=7).images
+            # images[0].save("stable_pix2pix.png")
 
             # remove background
             input_path = 'stable_pix2pix.png'
@@ -177,6 +177,7 @@ def stable(request, rq_id, img_url, paint):
             e_name = p.value
             # img = base64.b64encode(img.read())
             gif = base64.b64encode(gif.read())
+
             # url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
             # url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
             url = "43.201.219.33:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
@@ -199,8 +200,8 @@ def style(request, rq_id, img_url):
         sketch = "sketch"
         cartoon = "cartoon style"
 
-    model_id = "timbrooks/instruct-pix2pix"
-    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+    # model_id = "timbrooks/instruct-pix2pix"
+    # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
@@ -216,9 +217,9 @@ def style(request, rq_id, img_url):
     image = download_image(url)
 
     for p in Painting:
-        prompt = str(p.value)
-        images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
-        images[0].save("paintingStyle.png")
+        # prompt = str(p.value)
+        # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
+        # images[0].save("paintingStyle.png")
 
         input_path = 'paintingStyle.png'
         output_path = 'outStyle.png'
