@@ -218,7 +218,7 @@ def style_model(request, rq_id, img_url):
     # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
-
+    print("style_model start")
     imgPath = "http://3.39.22.13:8080/imagePath/"
     url = imgPath + str(img_url)
 
