@@ -196,22 +196,7 @@ def stable_model(request, rq_id, img_url, paint):
 
     return HttpResponse("emoji")
 
-def style(request, rq_id, img_url):
-    if not rq_id:
-        return "fail"
-
-    if Style.objects.filter(request_id=rq_id).exists():
-        return HttpResponse("exist")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(style_model(request, rq_id, img_url))
-    loop.close()
-    return HttpResponse("success")
-
-
-async def style_model(request, rq_id, img_url):
+async def style_model(rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -257,8 +242,16 @@ async def style_model(request, rq_id, img_url):
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         painting.save()
+async def style(request, rq_id, img_url):
+    if not rq_id:
+        return "fail"
 
-    return HttpResponse("style")
+    if Style.objects.filter(request_id=rq_id).exists():
+        return HttpResponse("exist")
+
+    await style_model(rq_id, img_url)
+
+    return HttpResponse("success")
 
 
 def show_img(request, rq_id, t_name):
