@@ -51,7 +51,10 @@ def stable(request, rq_id, img_url, paint):
         return HttpResponse("exist")
 
     redirect_url = "/stable_model/{}/{}/{}".format(rq_id, img_url, paint)
-    return redirect(redirect_url)
+    response = redirect(redirect_url)
+    response.status_code = 200
+
+    return response
 
 def stable_model(request, rq_id, img_url, paint):
     class Prompt(Enum):
@@ -200,7 +203,10 @@ def style(request, rq_id, img_url):
         return HttpResponse("exist")
 
     redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
-    return redirect(redirect_url)
+    response = redirect(redirect_url)
+    response.status_code = 200
+
+    return response
 
 def style_model(request, rq_id, img_url):
     class Painting(Enum):
