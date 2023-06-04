@@ -18,8 +18,7 @@ from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
 from django.views.decorators.http import require_GET
-from asgiref.sync import sync_to_async, async_to_sync
-
+import asyncio
 
 def check(request):
     return HttpResponse("hihi")
@@ -59,6 +58,7 @@ def stable(request, rq_id, img_url, paint):
 
     return response
 
+
 def stable_model(request, rq_id, img_url, paint):
     class Prompt(Enum):
         a = "smile"
@@ -75,7 +75,7 @@ def stable_model(request, rq_id, img_url, paint):
     # model_id = "timbrooks/instruct-pix2pix"
     # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
-    #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+    # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
     imgPath = "http://3.39.22.13:8080/imagePath/"
     url = imgPath + str(img_url)
@@ -88,6 +88,7 @@ def stable_model(request, rq_id, img_url, paint):
 
     image = download_image(url)
     image.save("original.png")
+
     # mp4 변환 메서드들
     def load_model(model_name):
         model = interpolator.Interpolator(snapshot_download(repo_id=model_name), None)
@@ -205,11 +206,11 @@ def style(request, rq_id, img_url):
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
-    style_model(request, rq_id, img_url)
+    asyncio.ensure_future(style_model(request, rq_id, img_url))
 
     return HttpResponse("success")
 
-@async_to_sync
+
 async def style_model(request, rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
@@ -226,6 +227,7 @@ async def style_model(request, rq_id, img_url):
     imgPath = "http://3.39.22.13:8080/imagePath/"
     url = str(imgPath) + str(img_url)
     print(url)
+
     async def download_image(url):
         image = Image.open(requests.get(url, stream=True).raw)
         image = ImageOps.exif_transpose(image)
@@ -254,9 +256,10 @@ async def style_model(request, rq_id, img_url):
         url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
-        await painting.save()
+        painting.save()
 
     return HttpResponse("style")
+
 
 def show_img(request, rq_id, t_name):
     styles = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
