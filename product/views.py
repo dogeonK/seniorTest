@@ -204,8 +204,8 @@ def style(request, rq_id, img_url):
 
     redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
     response = redirect(redirect_url)
-    response.status_code = 200
-
+    #response.status_code = 200
+    response.content = "success"
     return response
 
 def style_model(request, rq_id, img_url):
