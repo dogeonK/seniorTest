@@ -32,6 +32,7 @@ urlpatterns = [
 
     path("showImg/<str:rq_id>/<str:t_name>", show_img),
     path("showEmoji/<str:rq_id>/<str:t_name>/<str:e_name>/<str:s_num>", show_emoji),
+    path("showEmojiGif/<str:rq_id>/<str:t_name>/<str:e_name>/<str:s_num>", show_emoji_gif),
 
     path("test/", test_reqeust),
 ]
