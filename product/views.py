@@ -17,6 +17,7 @@ from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
+from django.contrib import messages
 
 def check(request):
     return HttpResponse("hihi")
@@ -203,9 +204,9 @@ def style(request, rq_id, img_url):
         return HttpResponse("exist")
 
     redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
-    response = HttpResponseRedirect(redirect_url)
-    response.content = "success"
-    return response
+    messages.success(request, "success")
+
+    return redirect(redirect_url)
 
 def style_model(request, rq_id, img_url):
     class Painting(Enum):
