@@ -67,7 +67,7 @@ def stable(request, rq_id, img_url, paint):
 
     #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
-    imgPath = "http://13.124.249.35:8080/imgPath"
+    imgPath = "http://13.124.249.35:8080/imgPath/"
     url = imgPath + str(img_url)
 
     def download_image(url):
@@ -205,7 +205,7 @@ def style(request, rq_id, img_url):
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
-    imgPath = "http://13.124.249.35:8080/imgPath"
+    imgPath = "http://13.124.249.35:8080/imgPath/"
     url = imgPath + str(img_url)
 
     def download_image(url):
