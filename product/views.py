@@ -207,7 +207,7 @@ def style(request, rq_id, img_url):
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(style_model(request, rq_id, img_url))
-
+    loop.close()
     return HttpResponse("success")
 
 
