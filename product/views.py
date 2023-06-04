@@ -17,7 +17,7 @@ from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
-import asyncio
+from asgiref.sync import sync_to_async
 def check(request):
     return HttpResponse("hihi")
 
@@ -246,7 +246,9 @@ async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
 
-    if Style.objects.filter(request_id=rq_id).exists():
+    exists = await sync_to_async(Style.objects.filter(request_id=rq_id).exists)()
+
+    if exists:
         return HttpResponse("exist")
 
     await style_model(rq_id, img_url)
