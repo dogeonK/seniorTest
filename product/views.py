@@ -17,7 +17,9 @@ from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
-from django.contrib import messages
+from django.views.decorators.http import require_GET
+from asgiref.sync import sync_to_async, async_to_sync
+
 
 def check(request):
     return HttpResponse("hihi")
@@ -195,7 +197,7 @@ def stable_model(request, rq_id, img_url, paint):
 
     return HttpResponse("emoji")
 
-
+@require_GET
 def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
@@ -203,12 +205,12 @@ def style(request, rq_id, img_url):
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
-    redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
-    messages.success(request, "success")
+    style_model(request, rq_id, img_url)
 
-    return redirect(redirect_url)
+    return HttpResponse("success")
 
-def style_model(request, rq_id, img_url):
+@async_to_sync
+async def style_model(request, rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -219,16 +221,18 @@ def style_model(request, rq_id, img_url):
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
     print("style_model start")
+    print(rq_id)
+    print(img_url)
     imgPath = "http://3.39.22.13:8080/imagePath/"
-    url = imgPath + str(img_url)
-
-    def download_image(url):
+    url = str(imgPath) + str(img_url)
+    print(url)
+    async def download_image(url):
         image = Image.open(requests.get(url, stream=True).raw)
         image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         return image
 
-    image = download_image(url)
+    image = await download_image(url)
 
     for p in Painting:
         # prompt = str(p.value)
@@ -250,7 +254,7 @@ def style_model(request, rq_id, img_url):
         url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
-        painting.save()
+        await painting.save()
 
     return HttpResponse("style")
 
