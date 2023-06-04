@@ -199,7 +199,7 @@ def style(request, rq_id, img_url):
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
-    redirect_url = "/style_model/{}/{}".format(rq_id, img_url)
+    redirect_url = "/tag_model/{}/{}".format(rq_id, img_url)
     return redirect(redirect_url)
 
 def style_model(request, rq_id, img_url):
