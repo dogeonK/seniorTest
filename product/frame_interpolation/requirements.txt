@@ -15,3 +15,4 @@ tqdm==4.64.1
 image-tools
 ffmpeg
 moviepy
+mediapy
