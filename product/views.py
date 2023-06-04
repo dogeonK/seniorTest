@@ -203,7 +203,8 @@ def style(request, rq_id, img_url):
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
-    asyncio.ensure_future(style_model(request, rq_id, img_url))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(style_model(request, rq_id, img_url))
 
     return HttpResponse("success")
 
