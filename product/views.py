@@ -1,5 +1,5 @@
 from PIL import Image, ImageOps
-from django.http import HttpResponse, HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseNotFound, FileResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
@@ -13,10 +13,10 @@ from enum import Enum
 from rembg import remove
 from product.frame_interpolation.eval import interpolator, util
 import mediapy
-from PIL import Image
 from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
+
 
 def check(request):
     return HttpResponse("hihi")
@@ -30,6 +30,7 @@ class PictureAPI(APIView):
         serializer = StyleSerializer(queryset, many=True)
         return Response(serializer.data)
 
+
 # 스프링에서 요청 -> requestid, tag_name, emoji_url, emoji_tag 줘
 class EmojiAPI(APIView):
     def get(self, request, rq_id):
@@ -42,12 +43,12 @@ def test_reqeust(request):
     return HttpResponse("success!");
 
 
-def stable(request, rq_id, paint):
+def stable(request, rq_id, img_url, paint):
     if not rq_id:
         return "fail"
 
-    # if Emoji.objects.filter(request_id=rq_id).exists():
-    #     return HttpResponse("exist")
+    if Emoji.objects.filter(request_id=rq_id).exists():
+        return HttpResponse("exist")
 
     class Prompt(Enum):
         a = "smile"
@@ -64,16 +65,20 @@ def stable(request, rq_id, paint):
     model_id = "timbrooks/instruct-pix2pix"
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
-    url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+    #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+
+    imgPath = "http://13.124.249.35:8080/imgPath"
+    url = imgPath + str(img_url)
 
     def download_image(url):
         image = Image.open(requests.get(url, stream=True).raw)
         image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         return image
-    image = download_image(url)
 
-    #mp4 변환 메서드들
+    image = download_image(url)
+    image.save("original.png")
+    # mp4 변환 메서드들
     def load_model(model_name):
         model = interpolator.Interpolator(snapshot_download(repo_id=model_name), None)
 
@@ -119,22 +124,26 @@ def stable(request, rq_id, paint):
 
         mediapy.write_video("out.mp4", frames, fps=30)
 
-    # img = Style.objects.filter(request_id=rq_id, tag_name=paint).values("img")
-    # base_string = img.first()['img']
-    # image = Image.open(BytesIO(base64.b64decode(base_string)))
-
     for s in Style_p:
         if s.name == paint:
             t_name = s.value
 
+    # img = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
+    # base_string = img.first()['img']
+    # image = Image.open(BytesIO(base64.b64decode(base_string)))
+    # image = ImageOps.exif_transpose(image)
+    # image = image.convert("RGB")
+
+    sfw_prompt = "Generate safe and SFW images without any NSFW content."
+
     for i in range(1, 2):
         for p in Prompt:
-            prompt = str(p.name) + str(t_name)
+            prompt = str(p.name) + ", " + str(t_name) + ", " + sfw_prompt
             images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
                           guidance_scale=7).images
             images[0].save("stable_pix2pix.png")
 
-            #remove background
+            # remove background
             input_path = 'stable_pix2pix.png'
             output_path = 'output.png'
 
@@ -158,18 +167,19 @@ def stable(request, rq_id, paint):
 
             resize_back.save("merge.png")
 
-            #img = open("merge.png", "rb")
+            # img = open("merge.png", "rb")
 
-            #mp4 생성 후 -> gif 변경
-            predict("stable_pix2pix.png", "merge.png", 3, model_name)
+            # mp4 생성 후 -> gif 변경
+            predict("original.png", "merge.png", 3, model_name)
             VideoFileClip('out.mp4').write_gif('out.gif')
             gif = open('out.gif', 'rb')
 
             e_name = p.value
-            #img = base64.b64encode(img.read())
+            # img = base64.b64encode(img.read())
             gif = base64.b64encode(gif.read())
-            #url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
-            url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            # url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            # url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            url = "43.201.219.33:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
 
             test = Emoji(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, emoji_url=url, emoji=gif, set_num=i)
             test.save()
@@ -178,12 +188,12 @@ def stable(request, rq_id, paint):
 
 
 def style(request, rq_id, img_url):
-
     if not rq_id:
         return "fail"
 
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
+
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -192,9 +202,9 @@ def style(request, rq_id, img_url):
     model_id = "timbrooks/instruct-pix2pix"
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
-    #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+    # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
-    imgPath = "http://springEC2IPv4:8080/imgPath"
+    imgPath = "http://13.124.249.35:8080/imgPath"
     url = imgPath + str(img_url)
 
     def download_image(url):
@@ -221,7 +231,8 @@ def style(request, rq_id, img_url):
 
         t_name = p.value
         img = base64.b64encode(img.read())
-        url = "localhost:8000/showImg/" + rq_id + "/" + t_name
+        # url = "localhost:8000/showImg/" + rq_id + "/" + t_name
+        url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         painting.save()
@@ -250,7 +261,8 @@ def show_img(request, rq_id, t_name):
 
 
 def show_emoji(request, rq_id, t_name, e_name, s_num):
-    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values("emoji")
+    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values(
+        "emoji")
     if emojis.exists():
         base_string = emojis.first()['emoji']
         img = Image.open(BytesIO(base64.b64decode(base_string)))
@@ -268,8 +280,10 @@ def show_emoji(request, rq_id, t_name, e_name, s_num):
     else:
         return HttpResponseNotFound("Image not found")
 
+
 def show_emoji_gif(request, rq_id, t_name, e_name, s_num):
-    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values("emoji")
+    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values(
+        "emoji")
     if emojis.exists():
         base_string = emojis.first()['emoji']
 
