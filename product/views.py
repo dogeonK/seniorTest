@@ -17,9 +17,7 @@ from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
-from django.views.decorators.http import require_GET
 import asyncio
-
 def check(request):
     return HttpResponse("hihi")
 
@@ -198,7 +196,6 @@ def stable_model(request, rq_id, img_url, paint):
 
     return HttpResponse("emoji")
 
-@require_GET
 def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
