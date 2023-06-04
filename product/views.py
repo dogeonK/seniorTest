@@ -16,7 +16,7 @@ import mediapy
 from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
-
+from django.shortcuts import redirect
 
 def check(request):
     return HttpResponse("hihi")
@@ -50,6 +50,10 @@ def stable(request, rq_id, img_url, paint):
     if Emoji.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
+    redirect_url = "/stable_model/{}/{}/{}".format(rq_id, img_url, paint)
+    return redirect(redirect_url)
+
+def stable_model(request, rq_id, img_url, paint):
     class Prompt(Enum):
         a = "smile"
         b = "angry"
@@ -67,7 +71,7 @@ def stable(request, rq_id, img_url, paint):
 
     #url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
-    imgPath = "http://13.124.249.35:8080/imagePath/"
+    imgPath = "http://3.39.22.13:8080/imagePath/"
     url = imgPath + str(img_url)
 
     def download_image(url):
@@ -195,6 +199,10 @@ def style(request, rq_id, img_url):
     if Style.objects.filter(request_id=rq_id).exists():
         return HttpResponse("exist")
 
+    redirect_url = "/style_model/{}/{}".format(rq_id, img_url)
+    return redirect(redirect_url)
+
+def style_model(request, rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -205,7 +213,7 @@ def style(request, rq_id, img_url):
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
-    imgPath = "http://13.124.249.35:8080/imagePath/"
+    imgPath = "http://3.39.22.13:8080/imagePath/"
     url = imgPath + str(img_url)
 
     def download_image(url):
@@ -239,7 +247,6 @@ def style(request, rq_id, img_url):
         painting.save()
 
     return HttpResponse("style")
-
 
 def show_img(request, rq_id, t_name):
     styles = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
