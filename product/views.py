@@ -221,6 +221,9 @@ async def style_model(rq_id, img_url):
 
     image = await download_image(url)
 
+    async def save_painting(painting):
+        await sync_to_async(painting.save)()
+
     for p in Painting:
         # prompt = str(p.value)
         # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
@@ -241,7 +244,7 @@ async def style_model(rq_id, img_url):
         url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
-        painting.save()
+        await save_painting(painting)
 async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
