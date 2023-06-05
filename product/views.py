@@ -1,5 +1,5 @@
 from PIL import Image, ImageOps
-from django.http import HttpResponse, HttpResponseNotFound, FileResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseNotFound, FileResponse, HttpResponseRedirect, JsonResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
@@ -26,15 +26,20 @@ def check(request):
 # DB에 (tag_name1, img_url, img, requestid), (tag_name2, img_url, img, requestid)... 저장
 class PictureAPI(APIView):
     def get(self, request, rq_id):
-        queryset = Style.objects.filter(request_id=rq_id)
+        queryset = Style.objects.filter(requestId=rq_id)
         serializer = StyleSerializer(queryset, many=True)
-        return Response(serializer.data)
+
+        data = serializer.data
+        post_url = "http://3.39.22.13:8080/tag/response"
+        response = requests.post(post_url, json=data)
+
+        return Response(response.json())
 
 
 # 스프링에서 요청 -> requestid, tag_name, emoji_url, emoji_tag 줘
 class EmojiAPI(APIView):
     def get(self, request, rq_id):
-        queryset = Emoji.objects.filter(request_id=rq_id)
+        queryset = Emoji.objects.filter(requestId=rq_id)
         serializer = EmojiSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -47,7 +52,7 @@ def stable(request, rq_id, img_url, paint):
     if not rq_id:
         return "fail"
 
-    if Emoji.objects.filter(request_id=rq_id).exists():
+    if Emoji.objects.filter(requestId=rq_id).exists():
         return HttpResponse("exist")
 
     redirect_url = "/stable_model/{}/{}/{}".format(rq_id, img_url, paint)
@@ -137,7 +142,7 @@ def stable_model(request, rq_id, img_url, paint):
         if s.name == paint:
             t_name = s.value
 
-    # img = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
+    # img = Style.objects.filter(requestId=rq_id, tagName=t_name).values("img")
     # base_string = img.first()['img']
     # image = Image.open(BytesIO(base64.b64decode(base_string)))
     # image = ImageOps.exif_transpose(image)
@@ -191,7 +196,7 @@ def stable_model(request, rq_id, img_url, paint):
             # url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
             url = "43.201.219.33:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
 
-            test = Emoji(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, emoji_url=url, emoji=gif, set_num=i)
+            test = Emoji(requestId=rq_id, tagName=t_name, emojiTag=e_name, emojiUrl=url, emoji=gif, setNum=i)
             test.save()
 
     return HttpResponse("emoji")
@@ -241,7 +246,7 @@ def style_model(request, rq_id, img_url):
         # url = "localhost:8000/showImg/" + rq_id + "/" + t_name
         url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
-        painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
+        painting = Style(requestId=rq_id, tagName=t_name, imgUrl=url, img=img)
         painting.save()
         get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
         response = requests.get(get_url)
@@ -251,7 +256,7 @@ def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
 
-    exists = Style.objects.filter(request_id=rq_id).exists()
+    exists = Style.objects.filter(requestId=rq_id).exists()
 
     if exists:
         return HttpResponse("exist")
@@ -263,7 +268,7 @@ def style(request, rq_id, img_url):
 
 
 def show_img(request, rq_id, t_name):
-    styles = Style.objects.filter(request_id=rq_id, tag_name=t_name).values("img")
+    styles = Style.objects.filter(requestId=rq_id, tagName=t_name).values("img")
     if styles.exists():
         base_string = styles.first()['img']
         img = Image.open(BytesIO(base64.b64decode(base_string)))
@@ -283,7 +288,7 @@ def show_img(request, rq_id, t_name):
 
 
 def show_emoji(request, rq_id, t_name, e_name, s_num):
-    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values(
+    emojis = Emoji.objects.filter(requestId=rq_id, tagName=t_name, emojiTag=e_name, setNum=int(s_num)).values(
         "emoji")
     if emojis.exists():
         base_string = emojis.first()['emoji']
@@ -304,7 +309,7 @@ def show_emoji(request, rq_id, t_name, e_name, s_num):
 
 
 def show_emoji_gif(request, rq_id, t_name, e_name, s_num):
-    emojis = Emoji.objects.filter(request_id=rq_id, tag_name=t_name, emoji_tag=e_name, set_num=int(s_num)).values(
+    emojis = Emoji.objects.filter(requestId=rq_id, tagName=t_name, emojiTag=e_name, setNum=int(s_num)).values(
         "emoji")
     if emojis.exists():
         base_string = emojis.first()['emoji']
