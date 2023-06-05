@@ -225,7 +225,7 @@ async def style_model(request, rq_id, img_url):
         await sync_to_async(painting.save)()
 
     def get_api(rq_id):
-        get_url = "http://http://43.201.219.33:8000//api/picture/{}".format(rq_id)
+        get_url = "http://http://43.201.219.33:8000/api/picture/{}".format(rq_id)
         response = requests.get(get_url)
         return response
 
