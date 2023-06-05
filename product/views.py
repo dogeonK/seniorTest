@@ -33,7 +33,7 @@ class PictureAPI(APIView):
         post_url = "http://3.39.22.13:8080/tag/response"
         response = requests.post(post_url, json=data)
 
-        return Response(response.json())
+        return Response(data)
 
 
 # 스프링에서 요청 -> requestid, tag_name, emoji_url, emoji_tag 줘
