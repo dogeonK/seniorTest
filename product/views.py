@@ -224,6 +224,9 @@ async def style_model(request, rq_id, img_url):
     async def save_painting(painting):
         await sync_to_async(painting.save)()
 
+    def redirect_api(rq_id):
+        return redirect("api/picture/{}".format(rq_id))
+
     for p in Painting:
         # prompt = str(p.value)
         # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
@@ -245,7 +248,7 @@ async def style_model(request, rq_id, img_url):
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         await save_painting(painting)
-        return redirect("api/picture/{}".format(rq_id))
+        await sync_to_async(redirect_api)(rq_id)
 async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
