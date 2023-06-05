@@ -37,7 +37,6 @@ class PictureAPI(APIView):
 
 
 # 스프링에서 요청 -> requestid, tag_name, emoji_url, emoji_tag 줘
-# 화풍 변환처럼 바꿔야 함
 class EmojiAPI(APIView):
     def get(self, request, rq_id):
         queryset = Emoji.objects.filter(requestId=rq_id)
@@ -47,6 +46,21 @@ class EmojiAPI(APIView):
 
 def test_reqeust(request):
     return HttpResponse("success!");
+
+
+def stable(request, rq_id, img_url, paint):
+    if not rq_id:
+        return "fail"
+
+    if Emoji.objects.filter(requestId=rq_id).exists():
+        return HttpResponse("exist")
+
+    redirect_url = "/stable_model/{}/{}/{}".format(rq_id, img_url, paint)
+    response = redirect(redirect_url)
+    response.status_code = 200
+
+    return response
+
 
 def stable_model(request, rq_id, img_url, paint):
     class Prompt(Enum):
@@ -61,8 +75,8 @@ def stable_model(request, rq_id, img_url, paint):
         sketch = "sketch"
         cartoon = "cartoon style"
 
-    model_id = "timbrooks/instruct-pix2pix"
-    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+    # model_id = "timbrooks/instruct-pix2pix"
+    # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
@@ -128,7 +142,6 @@ def stable_model(request, rq_id, img_url, paint):
         if s.name == paint:
             t_name = s.value
 
-    # 화풍 선택 된 이미지 받으려 했으나 rembg로 인해 원본 이미지 통해 gif 생성
     # img = Style.objects.filter(requestId=rq_id, tagName=t_name).values("img")
     # base_string = img.first()['img']
     # image = Image.open(BytesIO(base64.b64decode(base_string)))
@@ -137,12 +150,12 @@ def stable_model(request, rq_id, img_url, paint):
 
     sfw_prompt = "Generate safe and SFW images without any NSFW content."
 
-    for i in range(1, 4):
+    for i in range(1, 2):
         for p in Prompt:
-            prompt = str(p.name) + ", " + str(t_name) + ", " + sfw_prompt
-            images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
-                          guidance_scale=7).images
-            images[0].save("stable_pix2pix.png")
+            # prompt = str(p.name) + ", " + str(t_name) + ", " + sfw_prompt
+            # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
+            #               guidance_scale=7).images
+            # images[0].save("stable_pix2pix.png")
 
             # remove background
             input_path = 'stable_pix2pix.png'
@@ -168,7 +181,7 @@ def stable_model(request, rq_id, img_url, paint):
 
             resize_back.save("merge.png")
 
-            # img = open("merge.png", "rb") #gif 처리로 변환 -> 주석 처리
+            # img = open("merge.png", "rb")
 
             # mp4 생성 후 -> gif 변경
             predict("original.png", "merge.png", 3, model_name)
@@ -181,27 +194,12 @@ def stable_model(request, rq_id, img_url, paint):
 
             # url = "localhost:8000/showEmoji/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
             # url = "localhost:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
-            # url = "43.201.219.33:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
-            url = "13.114.204.13:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
+            url = "43.201.219.33:8000/showEmojiGif/" + rq_id + "/" + t_name + "/" + e_name + "/" + str(i)
 
             test = Emoji(requestId=rq_id, tagName=t_name, emojiTag=e_name, emojiUrl=url, emoji=gif, setNum=i)
             test.save()
 
-    get_url = "http://13.114.204.13:8000/api/emoji/{}".format(rq_id)
-    response = requests.get(get_url)
-    return response
-
-def stable(request, rq_id, img_url, paint):
-    if not rq_id:
-        return HttpResponse("fail")
-
-    if Emoji.objects.filter(requestId=rq_id).exists():
-        return HttpResponse("exist")
-
-    emoji_thread = threading.Thread(target=stable_model, args=(request, rq_id, img_url, paint))
-    emoji_thread.start()
-
-    return HttpResponse("success")
+    return HttpResponse("emoji")
 
 def style_model(request, rq_id, img_url):
     class Painting(Enum):
@@ -209,16 +207,16 @@ def style_model(request, rq_id, img_url):
         sketch = "sketch"
         cartoon = "cartoon style"
 
-    model_id = "timbrooks/instruct-pix2pix"
-    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+    # model_id = "timbrooks/instruct-pix2pix"
+    # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
-    # print("style_model start")
-    # print(rq_id)
-    # print(img_url)
+    print("style_model start")
+    print(rq_id)
+    print(img_url)
     imgPath = "http://3.39.22.13:8080/imagePath/"
     url = str(imgPath) + str(img_url)
-    # print(url)
+    print(url)
 
     def download_image(url):
         image = Image.open(requests.get(url, stream=True).raw)
@@ -230,36 +228,33 @@ def style_model(request, rq_id, img_url):
 
 
     for p in Painting:
-        prompt = str(p.value)
-        images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
-        images[0].save("paintingStyle.png")
+        # prompt = str(p.value)
+        # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
+        # images[0].save("paintingStyle.png")
 
-        input_path = 'paintingStyle.png'
-        output_path = 'outStyle.png'
-
-        input = Image.open(input_path)
-        output = remove(input)
-        output.save(output_path)
+        # input_path = 'paintingStyle.png'
+        # output_path = 'outStyle.png'
+        #
+        # input = Image.open(input_path)
+        # output = remove(input)
+        # output.save(output_path)
 
         img = open("outStyle.png", "rb")
 
         t_name = p.value
         img = base64.b64encode(img.read())
         # url = "localhost:8000/showImg/" + rq_id + "/" + t_name
-        # url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
-        url = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name
+        url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(requestId=rq_id, tagName=t_name, imgUrl=url, img=img)
         painting.save()
-
-    # get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
-    get_url = "http://13.114.204.13:8000/api/picture/{}".format(rq_id)
-    response = requests.get(get_url)
-    return response
+        get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
+        response = requests.get(get_url)
+        return response
 
 def style(request, rq_id, img_url):
     if not rq_id:
-        return HttpResponse("fail")
+        return "fail"
 
     exists = Style.objects.filter(requestId=rq_id).exists()
 
