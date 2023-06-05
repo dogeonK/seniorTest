@@ -196,7 +196,7 @@ def stable_model(request, rq_id, img_url, paint):
 
     return HttpResponse("emoji")
 
-async def style_model(rq_id, img_url):
+async def style_model(request, rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -245,6 +245,7 @@ async def style_model(rq_id, img_url):
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         await save_painting(painting)
+        return redirect("api/picture/{}".format(rq_id))
 async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
