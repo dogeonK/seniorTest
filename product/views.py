@@ -17,7 +17,7 @@ from huggingface_hub import snapshot_download
 from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
-from asgiref.sync import sync_to_async
+import threading
 def check(request):
     return HttpResponse("hihi")
 
@@ -196,7 +196,7 @@ def stable_model(request, rq_id, img_url, paint):
 
     return HttpResponse("emoji")
 
-async def style_model(request, rq_id, img_url):
+def style_model(request, rq_id, img_url):
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
@@ -213,16 +213,14 @@ async def style_model(request, rq_id, img_url):
     url = str(imgPath) + str(img_url)
     print(url)
 
-    async def download_image(url):
+    def download_image(url):
         image = Image.open(requests.get(url, stream=True).raw)
         image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         return image
 
-    image = await download_image(url)
+    image = download_image(url)
 
-    async def save_painting(painting):
-        await sync_to_async(painting.save)()
 
     def get_api(rq_id):
         get_url = "http://http://43.201.219.33:8000/api/picture/{}".format(rq_id)
@@ -249,20 +247,22 @@ async def style_model(request, rq_id, img_url):
         url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
-        await save_painting(painting)
-        await sync_to_async(get_api)(rq_id)
+        painting.save()
+        get_thread = threading.Thread(target=get_api, args=(rq_id,))
+        get_thread.start()
 async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
 
-    exists = await sync_to_async(Style.objects.filter(request_id=rq_id).exists)()
+    exists = Style.objects.filter(request_id=rq_id).exists()
 
     if exists:
         return HttpResponse("exist")
 
     await style_model(request, rq_id, img_url)
 
-    return HttpResponse("success")
+    style_thread = threading.Thread(target=style_model, args=(request, rq_id, img_url))
+    style_thread.start()
 
 
 def show_img(request, rq_id, t_name):
