@@ -222,11 +222,6 @@ def style_model(request, rq_id, img_url):
     image = download_image(url)
 
 
-    def get_api(rq_id):
-        get_url = "http://http://43.201.219.33:8000/api/picture/{}".format(rq_id)
-        response = requests.get(get_url)
-        return response
-
     for p in Painting:
         # prompt = str(p.value)
         # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
@@ -248,8 +243,10 @@ def style_model(request, rq_id, img_url):
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         painting.save()
-        get_thread = threading.Thread(target=get_api, args=(rq_id,))
-        get_thread.start()
+        get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
+        response = requests.get(get_url)
+        return response
+
 def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
@@ -262,7 +259,7 @@ def style(request, rq_id, img_url):
     style_thread = threading.Thread(target=style_model, args=(request, rq_id, img_url))
     style_thread.start()
 
-    return "success"
+    return HttpResponse("success")
 
 
 def show_img(request, rq_id, t_name):
