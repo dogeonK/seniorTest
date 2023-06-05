@@ -250,7 +250,7 @@ def style_model(request, rq_id, img_url):
         painting.save()
         get_thread = threading.Thread(target=get_api, args=(rq_id,))
         get_thread.start()
-async def style(request, rq_id, img_url):
+def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
 
@@ -259,10 +259,10 @@ async def style(request, rq_id, img_url):
     if exists:
         return HttpResponse("exist")
 
-    await style_model(request, rq_id, img_url)
-
     style_thread = threading.Thread(target=style_model, args=(request, rq_id, img_url))
     style_thread.start()
+
+    return "success"
 
 
 def show_img(request, rq_id, t_name):
