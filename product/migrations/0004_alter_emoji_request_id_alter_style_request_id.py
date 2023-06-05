@@ -12,12 +12,12 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterField(
             model_name="emoji",
-            name="request_id",
+            name="requestId",
             field=models.CharField(max_length=50),
         ),
         migrations.AlterField(
             model_name="style",
-            name="request_id",
+            name="requestId",
             field=models.CharField(max_length=50),
         ),
     ]

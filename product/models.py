@@ -11,9 +11,9 @@ class Product(models.Model):
 
 
 class Style(models.Model):
-    request_id = models.CharField(max_length=50, null=False)
-    tag_name = models.CharField(max_length=50, null=False)
-    img_url = models.CharField(max_length=256, null=False)
+    requestId = models.CharField(max_length=50, null=False)
+    tagName = models.CharField(max_length=50, null=False)
+    imgUrl = models.CharField(max_length=256, null=False)
     img = models.BinaryField(null=False)
 
     class Meta:
@@ -21,12 +21,12 @@ class Style(models.Model):
 
 
 class Emoji(models.Model):
-    request_id = models.CharField(max_length=50, null=False)
-    tag_name = models.CharField(max_length=50, null=False)
-    emoji_tag = models.CharField(max_length=50, null=False)
-    emoji_url = models.CharField(max_length=256, null=False)
+    requestId = models.CharField(max_length=50, null=False)
+    tagName = models.CharField(max_length=50, null=False)
+    emojiTag = models.CharField(max_length=50, null=False)
+    emojiUrl = models.CharField(max_length=256, null=False)
     emoji = models.BinaryField(null=False)
-    set_num = models.IntegerField(null=False)
+    setNum = models.IntegerField(null=False)
 
     class Meta:
         db_table = "emoji"
