@@ -255,7 +255,7 @@ async def style(request, rq_id, img_url):
     if exists:
         return HttpResponse("exist")
 
-    await style_model(rq_id, img_url)
+    await style_model(request, rq_id, img_url)
 
     return HttpResponse("success")
 
