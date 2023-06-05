@@ -224,8 +224,10 @@ async def style_model(request, rq_id, img_url):
     async def save_painting(painting):
         await sync_to_async(painting.save)()
 
-    def redirect_api(rq_id):
-        return redirect("api/picture/{}".format(rq_id))
+    def get_api(rq_id):
+        get_url = "http://http://43.201.219.33:8000//api/picture/{}".format(rq_id)
+        response = requests.get(get_url)
+        return response
 
     for p in Painting:
         # prompt = str(p.value)
@@ -248,7 +250,7 @@ async def style_model(request, rq_id, img_url):
 
         painting = Style(request_id=rq_id, tag_name=t_name, img_url=url, img=img)
         await save_painting(painting)
-        await sync_to_async(redirect_api)(rq_id)
+        await sync_to_async(get_api)(rq_id)
 async def style(request, rq_id, img_url):
     if not rq_id:
         return "fail"
