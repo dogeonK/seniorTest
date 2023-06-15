@@ -30,3 +30,13 @@ class Emoji(models.Model):
 
     class Meta:
         db_table = "emoji"
+
+class asynctest(models.Model):
+    requestId = models.CharField(max_length=50, null=False)
+    tagName = models.CharField(max_length=50, null=False)
+    tagUrl = models.CharField(max_length=256, null=False)
+    img = models.BinaryField(null=False)
+    setNum = models.IntegerField()
+
+    class Meta:
+        db_table = 'asynctest'

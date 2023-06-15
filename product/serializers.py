@@ -1,6 +1,6 @@
 from django.utils.baseconv import base64
 from rest_framework import serializers
-from .models import Product, Style, Emoji
+from .models import Product, Style, Emoji, asynctest
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -26,3 +26,10 @@ class EmojiSerializer(serializers.ModelSerializer):
     class Meta:
         model = Emoji
         fields = ('requestId', 'tagName', "emojiTag", "emojiUrl")
+
+class AsyncSerializer(serializers.ModelSerializer):
+    #emoji = serializers.ImageField(use_url=True)
+
+    class Meta:
+        model = asynctest
+        fields = '__all__'
