@@ -1,8 +1,7 @@
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageChops
 from django.http import HttpResponse, HttpResponseNotFound, FileResponse, HttpResponseRedirect, JsonResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import *
 from .serializers import *
 import base64
 from io import BytesIO
@@ -18,6 +17,8 @@ from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
 import threading
+
+
 def check(request):
     return HttpResponse("hihi")
 
@@ -65,10 +66,10 @@ def stable(request, rq_id, img_url, paint):
 def stable_model(request, rq_id, img_url, paint):
     class Prompt(Enum):
         a = "smile"
-        b = "angry"
-        c = "add a heart emoji"
-        d = "sad"
-        e = "yawn"
+        # b = "angry"
+        # c = "add a heart emoji"
+        # d = "sad"
+        # e = "yawn"
 
     class Style_p(Enum):
         gogh = "gogh painting style"
@@ -77,20 +78,20 @@ def stable_model(request, rq_id, img_url, paint):
 
     # model_id = "timbrooks/instruct-pix2pix"
     # pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
-
+    #
     # url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
-
-    imgPath = "http://3.39.22.13:8080/imagePath/"
-    url = imgPath + str(img_url)
-
-    def download_image(url):
-        image = Image.open(requests.get(url, stream=True).raw)
-        image = ImageOps.exif_transpose(image)
-        image = image.convert("RGB")
-        return image
-
-    image = download_image(url)
-    image.save("original.png")
+    #
+    # # imgPath = "http://3.39.22.13:8080/imagePath/"
+    # # url = imgPath + str(img_url)
+    #
+    # def download_image(url):
+    #     image = Image.open(requests.get(url, stream=True).raw)
+    #     image = ImageOps.exif_transpose(image)
+    #     image = image.convert("RGB")
+    #     return image
+    #
+    # image = download_image(url)
+    # image.save("original.png")
 
     # mp4 변환 메서드들
     def load_model(model_name):
@@ -167,8 +168,9 @@ def stable_model(request, rq_id, img_url, paint):
 
             # 이미지 파일 오픈
             wordImg = str(p.value) + ".png"
-            background = Image.open(wordImg)
-            foreground = Image.open("output.png")
+            background = Image.open("jennie.png").convert("RGBA")
+            # foreground = Image.open(wordImg).convert("RGBA")
+            foreground = Image.open("smile_rem.png").convert("RGBA")
 
             # 배경이 투명한 이미지 파일의 사이즈 가져오기
             (img_h, img_w) = foreground.size
@@ -176,10 +178,15 @@ def stable_model(request, rq_id, img_url, paint):
             # 합성할 배경 이미지를 위의 파일 사이즈로 resize
             resize_back = background.resize((img_h, img_w))
 
-            # 이미지 합성
-            resize_back.paste(foreground, (0, 0), foreground)
+            # 투명 마스트 생성
+            alpha_mask = foreground.split()[3]
 
-            resize_back.save("merge.png")
+            # 이미지 합성
+            # resize_back.paste(foreground, (0, 0), foreground)
+            merged_image = ImageChops.composite(foreground, resize_back, alpha_mask)
+
+            # resize_back.save("merge.png")
+            merged_image.save("merge.png")
 
             # img = open("merge.png", "rb")
 
@@ -200,6 +207,7 @@ def stable_model(request, rq_id, img_url, paint):
             test.save()
 
     return HttpResponse("emoji")
+
 
 def style_model(request, rq_id, img_url):
     class Painting(Enum):
@@ -226,7 +234,6 @@ def style_model(request, rq_id, img_url):
 
     image = download_image(url)
 
-
     for p in Painting:
         # prompt = str(p.value)
         # images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
@@ -251,6 +258,7 @@ def style_model(request, rq_id, img_url):
         get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
         response = requests.get(get_url)
         return response
+
 
 def style(request, rq_id, img_url):
     if not rq_id:
@@ -320,3 +328,68 @@ def show_emoji_gif(request, rq_id, t_name, e_name, s_num):
         return response
     else:
         return HttpResponseNotFound("Emoji not found")
+
+
+def process_painting(rq_id, image, p):
+    model_id = "timbrooks/instruct-pix2pix"
+    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+    prompt = str(p.value)
+    images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
+    images[0].save("paintingStyle.png")
+
+    input_path = 'paintingStyle.png'
+    output_path = 'outStyle.png'
+
+    input = Image.open(input_path)
+    output = remove(input)
+    output.save(output_path)
+
+    img = open("outStyle.png", "rb")
+
+    t_name = p.value
+    img = base64.b64encode(img.read())
+    url = "localhost:8000/showImg/" + rq_id + "/" + t_name
+    # url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
+
+    painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=1)
+    painting.save()
+    # get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
+    # response = requests.get(get_url)
+    # return response
+    print("save success")
+
+
+def style_model_async(request, rq_id, img_url):
+    from multiprocessing import Process
+    class Painting(Enum):
+        gogh = "gogh painting style"
+        sketch = "sketch"
+        cartoon = "cartoon style"
+
+    url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
+
+    def download_image(url):
+        image = Image.open(requests.get(url, stream=True).raw)
+        image = ImageOps.exif_transpose(image)
+        image = image.convert("RGB")
+        return image
+
+    image = download_image(url)
+
+    for p in Painting:
+        process_thread = threading.Thread(target=process_painting, args=(rq_id, image, p))
+        process_thread.start()
+        # process_thread = Process(target=process_painting, args=(rq_id, image, p))
+        # process_thread.start()
+        print("process_thread start")
+    return HttpResponse("async")
+
+
+def style_async(request, rq_id, img_url):
+    from multiprocessing import Process
+    style_thread = threading.Thread(target=style_model_async, args=(request, rq_id, img_url))
+    style_thread.start()
+    # process_thread = Process(target=style_model_async, args=(request, rq_id, img_url))
+    # process_thread.start()
+
+    return HttpResponse("success")
