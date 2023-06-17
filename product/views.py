@@ -18,7 +18,6 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
 import threading
 
-
 def check(request):
     return HttpResponse("hihi")
 
@@ -334,7 +333,7 @@ def process_painting(rq_id, image, p):
     model_id = "timbrooks/instruct-pix2pix"
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
     prompt = str(p.value)
-    images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7).images
+    images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5, guidance_scale=7, num_images_per_prompt=3).images
     images[0].save("paintingStyle.png")
 
     input_path = 'paintingStyle.png'
@@ -359,12 +358,16 @@ def process_painting(rq_id, image, p):
     print("save success")
 
 
+
 def style_model_async(request, rq_id, img_url):
     from multiprocessing import Process
     class Painting(Enum):
         gogh = "gogh painting style"
         sketch = "sketch"
         cartoon = "cartoon style"
+
+    model_id = "timbrooks/instruct-pix2pix"
+    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_cheker=None).to("cuda")
 
     url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
@@ -377,11 +380,55 @@ def style_model_async(request, rq_id, img_url):
     image = download_image(url)
 
     for p in Painting:
-        process_thread = threading.Thread(target=process_painting, args=(rq_id, image, p))
-        process_thread.start()
-        # process_thread = Process(target=process_painting, args=(rq_id, image, p))
-        # process_thread.start()
-        print("process_thread start")
+        prompt = str(p.value)
+        images = pipe(prompt, image=image, num_inference_steps=20, image_guidance_scale=1.5,
+                      guidance_scale=7, num_images_per_prompt=3).images
+        images[0].save("paintingStyle_1.png")
+        images[1].save("paintingStyle_2.png")
+        images[2].save("paintingStyle_3.png")
+
+        t_name = p.name
+
+        for i in range(3):
+            # image = images[i]
+            # if pipe.nsfw_content_detected(image):
+            #     img = open("nsfw.png", "rb")
+            #     img = base64.b64encode(img.read())
+            #     imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
+            #
+            #     painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=i+1)
+            #     painting.save()
+            #     print("nsfw!!!")
+            #     continue
+            safety_checker.
+
+            input_path = 'paintingStyle_{}.png'.format(i+1)
+            output_path = 'outStyle.png'
+
+            print("not nsfw \t{}".format(input_path))
+
+            input = Image.open(input_path)
+            output = remove(input)
+            output.save(output_path)
+
+            img = open("outStyle.png", "rb")
+
+            # t_name = p.name
+            img = base64.b64encode(img.read())
+            # url = "localhost:8000/showImg/" + rq_id + "/" + t_name
+            # url = "43.201.219.33:8000/showImg/" + rq_id + "/" + t_name
+            # imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
+            imgUrl = "localhost:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i + 1)
+
+            painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=imgUrl, img=img, setNum=i+1)
+            painting.save()
+
+
+    # get_url = "http://43.201.219.33:8000/api/picture/{}".format(rq_id)
+    # response = requests.get(get_url)
+    # return response
+    print("save success")
+
     return HttpResponse("async")
 
 
@@ -393,3 +440,22 @@ def style_async(request, rq_id, img_url):
     # process_thread.start()
 
     return HttpResponse("success")
+
+def show_test(request, rq_id, t_name, s_num):
+    styles = asynctest.objects.filter(requestId=rq_id, tagName=t_name, setNum=int(s_num)).values("img")
+    if styles.exists():
+        base_string = styles.first()['img']
+        img = Image.open(BytesIO(base64.b64decode(base_string)))
+
+        if img.format == "JPEG":
+            c_type = "image/jpeg"
+        elif img.format == "PNG":
+            c_type = "image/png"
+        else:
+            return HttpResponseNotFound("Unsupported image foramt")
+
+        response = HttpResponse(content_type=c_type)
+        img.save(response, format=img.format)
+        return response
+    else:
+        return HttpResponseNotFound("Image not found")
