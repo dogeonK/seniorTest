@@ -2,6 +2,8 @@ from PIL import Image, ImageOps, ImageChops
 from django.http import HttpResponse, HttpResponseNotFound, FileResponse, HttpResponseRedirect, JsonResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from transformers import CLIPConfig
+
 from .serializers import *
 import base64
 from io import BytesIO
@@ -368,7 +370,7 @@ def style_model_async(request, rq_id, img_url):
         cartoon = "cartoon style"
 
     model_id = "timbrooks/instruct-pix2pix"
-    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_cheker=None).to("cuda")
+    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, torch_dtype=torch.float16, safety_checker=None).to("cuda")
 
     url = "https://search.pstatic.net/sunny/?src=https%3A%2F%2Fmusicimage.xboxlive.com%2Fcatalog%2Fvideo.contributor.c41c6500-0200-11db-89ca-0019b92a3933%2Fimage%3Flocale%3Den-us%26target%3Dcircle&type=sc960_832"
 
@@ -391,20 +393,22 @@ def style_model_async(request, rq_id, img_url):
         t_name = p.name
 
         # 검열 분류
-        safety_checker = StableDiffusionSafetyChecker()
-        idx, has_nsfw_concepts = safety_checker(images)
+        # config = CLIPConfig()
+        # safety_checker = StableDiffusionSafetyChecker(config)
+        # safety_checker = pipe.safety_checker(clip_input=None, images=images)
+        # has_nsfw_concepts = safety_checker.forward(clip_input=None, images=images)
 
-        for i in idx:
-            image = images[i]
-            if has_nsfw_concepts[i]:
-                img = open("nsfw.png", "rb")
-                img = base64.b64encode(img.read())
-                imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
-
-                painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=i+1)
-                painting.save()
-                print("nsfw!!!")
-                continue
+        for i in range(3):
+            # image = images[i]
+            # if has_nsfw_concepts[i]:
+            #     img = open("nsfw.png", "rb")
+            #     img = base64.b64encode(img.read())
+            #     imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
+            #
+            #     painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=i+1)
+            #     painting.save()
+            #     print("nsfw!!!")
+            #     continue
 
 
 
