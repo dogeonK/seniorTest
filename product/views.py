@@ -17,6 +17,7 @@ from image_tools.sizes import resize_and_crop
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from django.shortcuts import redirect
 import threading
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 
 def check(request):
     return HttpResponse("hihi")
@@ -389,18 +390,23 @@ def style_model_async(request, rq_id, img_url):
 
         t_name = p.name
 
-        for i in range(3):
-            # image = images[i]
-            # if pipe.nsfw_content_detected(image):
-            #     img = open("nsfw.png", "rb")
-            #     img = base64.b64encode(img.read())
-            #     imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
-            #
-            #     painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=i+1)
-            #     painting.save()
-            #     print("nsfw!!!")
-            #     continue
-            safety_checker.
+        # 검열 분류
+        safety_checker = StableDiffusionSafetyChecker()
+        idx, has_nsfw_concepts = safety_checker(images)
+
+        for i in idx:
+            image = images[i]
+            if has_nsfw_concepts[i]:
+                img = open("nsfw.png", "rb")
+                img = base64.b64encode(img.read())
+                imgUrl = "13.114.204.13:8000/showImg/" + rq_id + "/" + t_name + "/" + str(i+1)
+
+                painting = asynctest(requestId=rq_id, tagName=t_name, tagUrl=url, img=img, setNum=i+1)
+                painting.save()
+                print("nsfw!!!")
+                continue
+
+
 
             input_path = 'paintingStyle_{}.png'.format(i+1)
             output_path = 'outStyle.png'
