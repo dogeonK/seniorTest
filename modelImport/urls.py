@@ -39,4 +39,5 @@ urlpatterns = [
 
     path("test/", test_reqeust),
     path("async/<str:rq_id>/<str:img_url>", style_async),
+    path("showImg/<str:rq_id>/<str:t_name>/<str:s_num>", show_test),
 ]
